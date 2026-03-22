@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fondos de Inversión - Acciones & Valores</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: #8b0000;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header span {
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .badge {
+      background: #ffffff;
+      color: #8b0000;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+      padding: 40px 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 36px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .icon {
+      width: 48px;
+      height: 48px;
+      background: #fdecea;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    h1 {
+      font-size: 20px;
+      color: #1a1a1a;
+    }
+
+    h1 span {
+      display: block;
+      font-size: 13px;
+      color: #888;
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #333;
+      background: #fafafa;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #8b0000;
+      background: white;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .chip {
+      padding: 6px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #555;
+      background: #fafafa;
+      transition: all 0.2s;
+    }
+
+    .chip:hover, .chip.active {
+      border-color: #8b0000;
+      background: #fdecea;
+      color: #8b0000;
+      font-weight: 600;
+    }
+
+    .divider {
+      font-size: 12px;
+      color: #aaa;
+      text-align: center;
+      margin: 20px 0 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      background: #8b0000;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #6e0000;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+      margin-top: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>Acciones & Valores</span>
+    <div class="badge">Fondos de Inversión</div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+
+      <div class="card-header">
+        <div class="icon">📈</div>
+        <h1>
+          Quiero Invertir
+          <span>Un asesor te contactará para orientarte</span>
+        </h1>
+      </div>
+
+      <div class="row">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" placeholder="Juan">
+        </div>
+        <div class="form-group">
+          <label>Apellido</label>
+          <input type="text" placeholder="Pérez">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" placeholder="correo@ejemplo.com">
+      </div>
+
+      <div class="form-group">
+        <label>Teléfono / WhatsApp</label>
+        <input type="tel" placeholder="+57 300 000 0000">
+      </div>
+
+      <div class="divider">Perfil de inversión</div>
+
+      <div class="form-group">
+        <label>¿Cuánto te gustaría invertir?</label>
+        <select>
+          <option value="">Selecciona un rango</option>
+          <option>Menos de $1.000.000 COP</option>
+          <option>$1.000.000 – $5.000.000 COP</option>
+          <option>$5.000.000 – $20.000.000 COP</option>
+          <option>Más de $20.000.000 COP</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>¿Qué tipo de fondo te interesa?</label>
+        <div class="chips">
+          <span class="chip">Conservador</span>
+          <span class="chip">Moderado</span>
+          <span class="chip">Agresivo</span>
+          <span class="chip">No sé aún</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>¿Cuál es tu objetivo?</label>
+        <select>
+          <option value="">Selecciona una opción</option>
+          <option>Ahorrar a corto plazo</option>
+          <option>Crecer mi capital a mediano plazo</option>
+          <option>Inversión en dólares</option>
+          <option>Acciones colombianas o internacionales</option>
+          <option>Otro</option>
+        </select>
+      </div>
+
+      <button>Solicitar asesoría →</button>
+      <p class="note">14 fondos disponibles · Desde $50.000 COP · 65+ años de experiencia</p>
+
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+  </script>
+
+</body>
+</html>

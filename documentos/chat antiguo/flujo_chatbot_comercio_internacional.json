@@ -1,0 +1,181 @@
+{
+  "titulo": "Flujo de Chatbot - Comercio Internacional",
+  "descripcion": "Mapa conceptual del flujo de conversación de un chatbot especializado en comercio internacional",
+  "tipo": "flujo_conversacional",
+  "inicio": {
+    "id": "inicio",
+    "nombre": "Plan de Inscripción",
+    "descripcion": "Contiene opciones de inscripción y planes",
+    "conexiones": ["saludo"]
+  },
+  "nodos": [
+    {
+      "id": "saludo",
+      "nombre": "Saludo",
+      "tipo": "mensaje",
+      "contenido": "Bienvenida inicial del chatbot",
+      "conexiones": ["menu_principal"]
+    },
+    {
+      "id": "menu_principal",
+      "nombre": "Menú Principal",
+      "tipo": "opciones",
+      "opciones": [
+        "Procesos y Documentación de Italia",
+        "Tipos de Aranceles",
+        "Otros servicios"
+      ],
+      "conexiones": ["rama_procesos", "rama_aranceles", "rama_otros"]
+    },
+    {
+      "id": "rama_procesos",
+      "nombre": "Procesos y Documentación de Italia",
+      "tipo": "rama",
+      "subnodos": [
+        {
+          "id": "proceso_1",
+          "nombre": "¿Qué es lo que necesito para importar desde Italia?",
+          "tipo": "pregunta",
+          "respuesta": "Información sobre requisitos de importación",
+          "conexiones": ["opciones_import"]
+        },
+        {
+          "id": "opciones_import",
+          "nombre": "Opciones de Importación",
+          "tipo": "opciones",
+          "opciones": [
+            "Documentación requerida",
+            "Procesos aduanales",
+            "Requisitos regulatorios",
+            "Volver al menú"
+          ],
+          "conexiones": ["documentacion", "aduanales", "regulatorio"]
+        },
+        {
+          "id": "documentacion",
+          "nombre": "Documentación Requerida",
+          "tipo": "informacion",
+          "contenido": "Listado de documentos necesarios para importar",
+          "documentos": [
+            "Factura comercial",
+            "Certificado de origen",
+            "Packing list",
+            "Documentos aduanales"
+          ]
+        },
+        {
+          "id": "aduanales",
+          "nombre": "Procesos Aduanales",
+          "tipo": "informacion",
+          "contenido": "Explicación de trámites aduanales"
+        },
+        {
+          "id": "regulatorio",
+          "nombre": "Requisitos Regulatorios",
+          "tipo": "informacion",
+          "contenido": "Normativas y regulaciones aplicables"
+        }
+      ]
+    },
+    {
+      "id": "rama_aranceles",
+      "nombre": "Tipos de Aranceles",
+      "tipo": "rama",
+      "subnodos": [
+        {
+          "id": "aranceles_1",
+          "nombre": "¿Qué son los aranceles?",
+          "tipo": "pregunta",
+          "respuesta": "Explicación conceptual de aranceles",
+          "contenido": "Los aranceles son impuestos sobre mercancías importadas"
+        },
+        {
+          "id": "clasificacion_aranceles",
+          "nombre": "Clasificación de Aranceles",
+          "tipo": "opciones",
+          "opciones": [
+            "Aranceles ad valorem",
+            "Aranceles específicos",
+            "Aranceles mixtos",
+            "Ver ejemplos"
+          ],
+          "conexiones": ["ad_valorem", "especificos", "mixtos", "ejemplos_aranceles"]
+        },
+        {
+          "id": "ad_valorem",
+          "nombre": "Aranceles Ad Valorem",
+          "tipo": "informacion",
+          "contenido": "Se calculan como porcentaje del valor aduanal"
+        },
+        {
+          "id": "especificos",
+          "nombre": "Aranceles Específicos",
+          "tipo": "informacion",
+          "contenido": "Se establecen como cantidad fija por unidad"
+        },
+        {
+          "id": "mixtos",
+          "nombre": "Aranceles Mixtos",
+          "tipo": "informacion",
+          "contenido": "Combinación de ad valorem y específicos"
+        },
+        {
+          "id": "ejemplos_aranceles",
+          "nombre": "Ejemplos de Aranceles",
+          "tipo": "informacion",
+          "contenido": "Casos prácticos de cálculo de aranceles"
+        }
+      ]
+    },
+    {
+      "id": "rama_otros",
+      "nombre": "Otros Servicios",
+      "tipo": "rama",
+      "subnodos": [
+        {
+          "id": "otros_1",
+          "nombre": "Servicios Adicionales",
+          "tipo": "opciones",
+          "opciones": [
+            "Asesoría personalizada",
+            "Consultas específicas",
+            "Información de contacto"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "contexto_general",
+      "nombre": "Contexto General",
+      "tipo": "informacion_contextual",
+      "contenido": "Este chatbot proporciona información sobre comercio internacional, específicamente sobre importaciones desde Italia, clasificación de aranceles y procesos aduanales",
+      "audiencia": "Personas interesadas en comercio internacional y procesos de importación",
+      "temas_principales": [
+        "Importación desde Italia",
+        "Documentación comercial",
+        "Aranceles y aduanas",
+        "Regulaciones comerciales"
+      ]
+    }
+  ],
+  "flujo_conversacional": {
+    "inicio": "El usuario ingresa al chat",
+    "estructura": "El chatbot presenta un menú con tres opciones principales",
+    "navegacion": "El usuario puede navegar entre diferentes ramas según sus necesidades",
+    "profundidad": "Cada rama se subdivide en temas más específicos",
+    "conclusion": "El usuario obtiene la información necesaria para sus consultas de comercio internacional"
+  },
+  "notas_importantes": [
+    "Este es un flujo de carácter INFORMATIVO ÚNICAMENTE",
+    "No contiene instrucciones de ejecución",
+    "Documenta la estructura conversacional del chatbot",
+    "Está diseñado para que Claude Code y otros sistemas puedan entender la lógica del flujo",
+    "Cada nodo representa un punto en la conversación o un conjunto de opciones"
+  ],
+  "colores_en_diagrama": {
+    "gris": "Nodos iniciales y estructurales",
+    "amarillo": "Información y respuestas del chatbot",
+    "azul": "Enlaces externos o referencias",
+    "rojo": "Notas especiales o importante"
+  }
+}

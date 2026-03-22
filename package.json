@@ -1,0 +1,16 @@
+{
+  "name": "chatbot-av",
+  "version": "1.0.0",
+  "description": "Chatbot Acciones & Valores",
+  "main": "server-rag.js",
+  "scripts": {
+    "start": "node server-rag.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.3",
+    "pdf-parse": "^1.1.1"
+  }
+}
