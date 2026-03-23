@@ -312,7 +312,14 @@
   function addUserMessage(text) {
     const msg = document.createElement('div');
     msg.className = 'msg user';
-    msg.innerHTML = `<div class="bubble">${text}</div><span class="msg-time">${getTime()}</span>`;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    const time = document.createElement('span');
+    time.className = 'msg-time';
+    time.textContent = getTime();
+    msg.appendChild(bubble);
+    msg.appendChild(time);
     messagesEl.appendChild(msg);
     scrollToBottom();
   }
@@ -358,6 +365,7 @@
 
     addUserMessage(msg);
     history.push({ role: 'user', content: msg });
+    if (history.length > 40) history.splice(0, history.length - 40);
 
     const typingEl = showTyping();
 

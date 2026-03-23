@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.99.3",
     "pdf-parse": "^1.1.1"
   }
 }

@@ -4,6 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const pdfParse = require('pdf-parse');
 
+// Carga .env si existe (solo para desarrollo local)
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+    const [key, ...rest] = line.trim().split('=');
+    if (key && !key.startsWith('#') && rest.length) process.env[key] = rest.join('=');
+  });
+}
+
 const MIME_TYPES = {
   '.html': 'text/html',
   '.css':  'text/css',
@@ -14,38 +23,62 @@ const MIME_TYPES = {
 };
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
+if (!ANTHROPIC_KEY) { console.error('ERROR: ANTHROPIC_KEY env var is required'); process.exit(1); }
+
 const PORT = process.env.PORT || 3000;
 
-// WhatsApp Business API
+// WhatsApp Business API (opcionales — solo requeridas si usas el canal WhatsApp)
 const WA_TOKEN = process.env.WHATSAPP_TOKEN;
 const WA_PHONE_ID = process.env.WHATSAPP_PHONE_ID || '1065059880021347';
 const WA_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'accivalores-webhook-2024';
 
+if (!WA_TOKEN) console.warn('ADVERTENCIA: WHATSAPP_TOKEN no definido — canal WhatsApp deshabilitado');
+
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const ANTHROPIC_API_VERSION = '2023-06-01';
+const GRAPH_API_VERSION = 'v22.0';
+
 // Historial de conversación por número de WhatsApp (en memoria)
+// Each entry: { history: [], lastSeen: Date }
 const waConversaciones = new Map();
+
+// Evict conversations not seen in the last 24 hours (runs every 30 minutes)
+setInterval(() => {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const [key, entry] of waConversaciones) {
+    if (entry.lastSeen < cutoff) waConversaciones.delete(key);
+  }
+}, 30 * 60 * 1000).unref();
 
 // Contenido de los PDFs cargado al inicio
 let comexContext = '';
 
 async function cargarDocumentosComex() {
   const docsDir = path.join(__dirname, 'documentos');
-  if (!fs.existsSync(docsDir)) {
+  try {
+    await fs.promises.access(docsDir);
+  } catch {
     console.log('⚠️  Carpeta documentos no encontrada, continuando sin RAG.');
     return;
   }
-  const archivos = fs.readdirSync(docsDir).filter(f => f.toLowerCase().endsWith('.pdf'));
-  let textoTotal = '';
+  const archivos = (await fs.promises.readdir(docsDir)).filter(f => f.toLowerCase().endsWith('.pdf'));
+  const parts = [];
   for (const archivo of archivos) {
     try {
-      const buffer = fs.readFileSync(path.join(docsDir, archivo));
+      const buffer = await fs.promises.readFile(path.join(docsDir, archivo));
       const data = await pdfParse(buffer);
-      textoTotal += `\n=== ${archivo} ===\n${data.text.trim()}\n`;
+      parts.push(`\n=== ${archivo} ===\n${data.text.trim()}\n`);
       console.log(`✅ PDF cargado: ${archivo}`);
     } catch (e) {
       console.error(`❌ Error leyendo ${archivo}:`, e.message);
     }
   }
-  comexContext = textoTotal;
+  comexContext = parts.join('');
+  if (comexContext) {
+    const comexSection = `\n\nDOCUMENTACIÓN DETALLADA DE COMERCIO EXTERIOR (usa esta info para responder con precisión):\n${comexContext}`;
+    SYSTEM_WEB_COMEX = SYSTEM_BASE + comexSection;
+    SYSTEM_WA_COMEX = SYSTEM_WHATSAPP + comexSection;
+  }
 }
 
 const SYSTEM_BASE = `Eres el asistente virtual oficial de Acciones & Valores S.A. (accivalores.com), agente oficial de Western Union en Colombia. La firma comisionista de bolsa más antigua de Colombia, fundada en 1959. Más de 65 años de experiencia, +180 oficinas para giros Western Union, 219+ agencias nacionales, 800+ colaboradores. Calificación Fitch Ratings: "Fuerte(col)". Vigilada por la Superintendencia Financiera de Colombia.
@@ -68,7 +101,7 @@ DIVISAS: Para tasa del dólar/euro visitar: https://www.accivalores.com/compra-y
 
 OFICINAS: Si el cliente pregunta por la oficina más cercana o dónde encontrarnos, responde con los dos links:
 - <a href="https://www.accivalores.com/oficinas/" target="_blank">Ver todas las oficinas</a>
-- <a href="https://www.google.com/maps/search/Western+Union+-+Acciones+y+Valores" target="_blank">Buscar en Google Maps</a>
+- <a href="https://www.google.com/maps/search/Acciones+%26+Valores" target="_blank">Buscar en Google Maps</a>
 
 COMERCIO EXTERIOR / PAGOS INTERNACIONALES:
 Acciones & Valores ofrece soluciones de comercio exterior en alianza con Convera (red global de pagos), posicionándose en el top 10 de intermediarios cambiarios de Colombia.
@@ -93,9 +126,12 @@ REGLAS:
 - Máximo 3 párrafos cortos
 - Links como HTML: <a href="URL" target="_blank">texto</a>
 - Divisas personales: redirigir a <a href="https://www.accivalores.com/compra-y-venta-de-divisas/" target="_blank">ver tasa aquí</a>
+- Cuando el cliente mencione que quiere enviar o recibir dinero al exterior y no quede claro si es personal o empresarial, hazle SIEMPRE esta pregunta antes de continuar: "¿El pago es para una persona (familiar, amigo) o para un proveedor/empresa en el exterior?"
+  · Responde "persona" o similar → Western Union
+  · Responde "proveedor", "empresa", "negocio" o similar → Comercio Exterior
 - Cuando identifiques que el cliente necesita un servicio específico, invítalo a continuar con un link HTML así:
   · Fondos de inversión → <a href="/formulario-fondos.html" target="_blank">Completar formulario de inversión</a>
-  · Western Union (giros personales o empresariales) → <a href="/formulario-western-union.html" target="_blank">Completar formulario Western Union</a>
+  · Western Union (giros personales) → <a href="/formulario-western-union.html" target="_blank">Completar formulario Western Union</a>
   · Comercio exterior, pagos internacionales, coberturas, GlobalPay → <a href="/formulario-comercio-exterior.html" target="_blank">Completar formulario Comercio Exterior</a>
 - Muestra el link solo cuando ya quede claro qué servicio necesita el cliente, no en el primer mensaje`;
 
@@ -111,19 +147,17 @@ const COMEX_KEYWORDS = [
 ];
 
 function esPreguntaComex(messages) {
-  const ultimoMensaje = messages
-    .filter(m => m.role === 'user')
-    .pop();
+  const ultimoMensaje = [...messages].reverse().find(m => m.role === 'user');
   if (!ultimoMensaje) return false;
   const texto = ultimoMensaje.content.toLowerCase();
   return COMEX_KEYWORDS.some(kw => texto.includes(kw));
 }
 
+let SYSTEM_WEB = SYSTEM_BASE;
+let SYSTEM_WEB_COMEX = SYSTEM_BASE;
+
 function buildSystem(incluirComex) {
-  if (incluirComex && comexContext) {
-    return SYSTEM_BASE + `\n\nDOCUMENTACIÓN DETALLADA DE COMERCIO EXTERIOR (usa esta info para responder con precisión):\n${comexContext}`;
-  }
-  return SYSTEM_BASE;
+  return incluirComex ? SYSTEM_WEB_COMEX : SYSTEM_WEB;
 }
 
 // System prompt adaptado para WhatsApp (sin HTML, links en texto plano)
@@ -147,7 +181,7 @@ DIVISAS: Para tasa del dólar/euro visitar: https://www.accivalores.com/compra-y
 
 OFICINAS: Si el cliente pregunta por la oficina más cercana:
 - Ver todas las oficinas: https://www.accivalores.com/oficinas/
-- Buscar en Google Maps: https://www.google.com/maps/search/Western+Union+-+Acciones+y+Valores
+- Buscar en Google Maps: https://www.google.com/maps/search/Acciones+%26+Valores
 
 COMERCIO EXTERIOR / PAGOS INTERNACIONALES:
 Acciones & Valores ofrece soluciones de comercio exterior en alianza con Convera (red global de pagos), posicionándose en el top 10 de intermediarios cambiarios de Colombia.
@@ -170,14 +204,17 @@ REGLAS:
 - Responde en español, profesional y cercano
 - Máximo 3 párrafos cortos
 - Estás en WhatsApp: usa solo texto plano, sin HTML. Los links van como URLs directas
+- Cuando el cliente mencione que quiere enviar o recibir dinero al exterior y no quede claro si es personal o empresarial, hazle SIEMPRE esta pregunta antes de continuar: "¿El pago es para una persona (familiar, amigo) o para un proveedor/empresa en el exterior?"
+  · Responde "persona" o similar → Western Union
+  · Responde "proveedor", "empresa", "negocio" o similar → Comercio Exterior
 - Cuando identifiques que el cliente necesita un servicio específico, dile que un asesor lo contactará y pídele su nombre completo y el mejor horario para llamarlo
 - Muestra el link de contacto solo cuando quede claro qué servicio necesita, no en el primer mensaje`;
 
+let SYSTEM_WA = SYSTEM_WHATSAPP;
+let SYSTEM_WA_COMEX = SYSTEM_WHATSAPP;
+
 function buildSystemWhatsapp(incluirComex) {
-  if (incluirComex && comexContext) {
-    return SYSTEM_WHATSAPP + `\n\nDOCUMENTACIÓN DETALLADA DE COMERCIO EXTERIOR (usa esta info para responder con precisión):\n${comexContext}`;
-  }
-  return SYSTEM_WHATSAPP;
+  return incluirComex ? SYSTEM_WA_COMEX : SYSTEM_WA;
 }
 
 // Quita etiquetas HTML de la respuesta por si acaso
@@ -198,7 +235,7 @@ function enviarMensajeWhatsapp(destinatario, texto) {
 
   const req = https.request({
     hostname: 'graph.facebook.com',
-    path: `/v22.0/${WA_PHONE_ID}/messages`,
+    path: `/${GRAPH_API_VERSION}/${WA_PHONE_ID}/messages`,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -220,11 +257,16 @@ function enviarMensajeWhatsapp(destinatario, texto) {
   req.end();
 }
 
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
+
 function sendCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
 }
 
 const server = http.createServer((req, res) => {
@@ -255,15 +297,27 @@ const server = http.createServer((req, res) => {
   // ── WhatsApp webhook incoming messages (POST) ──
   if (req.method === 'POST' && req.url === '/whatsapp-webhook') {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    let bodySize = 0;
+    const BODY_LIMIT = 65536;
+    req.on('data', chunk => {
+      bodySize += chunk.length;
+      if (bodySize > BODY_LIMIT) {
+        res.writeHead(413);
+        res.end('Payload Too Large');
+        req.destroy();
+        return;
+      }
+      body += chunk;
+    });
     req.on('end', async () => {
+      if (res.writableEnded) return;
       res.writeHead(200);
       res.end('OK');
 
       try {
         const data = JSON.parse(body);
-        const entry = data?.entry?.[0];
-        const changes = entry?.changes?.[0];
+        const waEntry = data?.entry?.[0];
+        const changes = waEntry?.changes?.[0];
         const msgObj = changes?.value?.messages?.[0];
 
         if (!msgObj || msgObj.type !== 'text') return;
@@ -274,14 +328,16 @@ const server = http.createServer((req, res) => {
         console.log(`📱 WA [${from}]: ${texto}`);
 
         // Mantener historial por usuario (máx 10 turnos)
-        if (!waConversaciones.has(from)) waConversaciones.set(from, []);
-        const historial = waConversaciones.get(from);
+        if (!waConversaciones.has(from)) waConversaciones.set(from, { history: [], lastSeen: Date.now() });
+        const entry = waConversaciones.get(from);
+        entry.lastSeen = Date.now();
+        const historial = entry.history;
         historial.push({ role: 'user', content: texto });
         if (historial.length > 20) historial.splice(0, 2);
 
         const incluirComex = esPreguntaComex(historial);
         const payload = JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: CLAUDE_MODEL,
           max_tokens: 800,
           system: buildSystemWhatsapp(incluirComex),
           messages: historial
@@ -294,7 +350,7 @@ const server = http.createServer((req, res) => {
           headers: {
             'Content-Type': 'application/json',
             'x-api-key': ANTHROPIC_KEY,
-            'anthropic-version': '2023-06-01',
+            'anthropic-version': ANTHROPIC_API_VERSION,
             'Content-Length': Buffer.byteLength(payload)
           }
         }, apiRes => {
@@ -327,17 +383,29 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'GET') {
+    // Redirigir raíz a index.html
+    if (req.url === '/' || req.url === '') {
+      res.writeHead(302, { Location: '/index.html' });
+      res.end();
+      return;
+    }
     // Servir archivos estáticos (.html, .css, .js, imágenes)
     const ext = path.extname(req.url);
     if (ext && MIME_TYPES[ext]) {
-      const filePath = path.join(__dirname, req.url);
-      if (fs.existsSync(filePath)) {
-        res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] });
-        fs.createReadStream(filePath).pipe(res);
-      } else {
+      const safeBase = path.resolve(__dirname) + path.sep;
+      const filePath = path.resolve(__dirname, '.' + req.url.split('?')[0]);
+      if (!filePath.startsWith(safeBase)) {
+        res.writeHead(403);
+        res.end('Forbidden');
+        return;
+      }
+      const stream = fs.createReadStream(filePath);
+      stream.on('error', () => {
         res.writeHead(404);
         res.end('Archivo no encontrado');
-      }
+      });
+      res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] });
+      stream.pipe(res);
       return;
     }
     // Health check
@@ -348,13 +416,36 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && req.url === '/chat') {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    let bodySize = 0;
+    const BODY_LIMIT = 65536;
+    req.on('data', chunk => {
+      bodySize += chunk.length;
+      if (bodySize > BODY_LIMIT) {
+        res.writeHead(413);
+        res.end('Payload Too Large');
+        req.destroy();
+        return;
+      }
+      body += chunk;
+    });
     req.on('end', async () => {
+      if (res.writableEnded) return;
       try {
         const { messages } = JSON.parse(body);
+        if (
+          !Array.isArray(messages) ||
+          messages.length > 40 ||
+          !messages.every(
+            m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string'
+          )
+        ) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid messages array' }));
+          return;
+        }
         const incluirComex = esPreguntaComex(messages);
         const payload = JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: CLAUDE_MODEL,
           max_tokens: 1000,
           system: buildSystem(incluirComex),
           messages
@@ -367,7 +458,7 @@ const server = http.createServer((req, res) => {
           headers: {
             'Content-Type': 'application/json',
             'x-api-key': ANTHROPIC_KEY,
-            'anthropic-version': '2023-06-01',
+            'anthropic-version': ANTHROPIC_API_VERSION,
             'Content-Length': Buffer.byteLength(payload)
           }
         }, apiRes => {
@@ -380,6 +471,7 @@ const server = http.createServer((req, res) => {
         });
 
         apiReq.on('error', err => {
+          console.error('❌ Error Claude API /chat:', err);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ content: [{ text: '__SIN_CREDITOS__' }] }));
         });
@@ -388,6 +480,7 @@ const server = http.createServer((req, res) => {
         apiReq.end();
 
       } catch (e) {
+        console.error('❌ Error procesando /chat:', e);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ content: [{ text: '__SIN_CREDITOS__' }] }));
       }
